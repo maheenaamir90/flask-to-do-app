@@ -1,7 +1,12 @@
 import unittest
+import warnings
 
 from app import create_app, db
 from app.models import Task, User
+
+# Keep test output clean for demo/report capture.
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=ResourceWarning)
 
 
 class SecurityTests(unittest.TestCase):
