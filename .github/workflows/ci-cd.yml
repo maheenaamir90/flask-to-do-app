@@ -1,0 +1,169 @@
+name: Flask CI/CD
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+permissions:
+  contents: read
+  security-events: read
+  actions: read
+
+jobs:
+  test:
+    name: Install Dependencies and Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run tests
+        run: |
+          # Uses unittest discovery so CI still executes even when test count is small.
+          python -m unittest discover -s . -p "test*.py" -v
+
+  codeql:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+          queries: security-extended,security-and-quality
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+
+  zap-baseline:
+    name: OWASP ZAP Baseline Scan
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start Flask app on localhost
+        run: |
+          nohup python -c "from app import create_app; app = create_app(); app.run(host='127.0.0.1', port=5000, debug=False)" > flask.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:5000/ >/dev/null; then
+              echo "Flask app is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Flask app failed to start."
+          cat flask.log
+          exit 1
+
+      - name: Run ZAP baseline scan
+        continue-on-error: true
+        run: |
+          mkdir -p zap-report
+          docker run --rm --network host -v "${{ github.workspace }}:/zap/wrk/:rw" ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://127.0.0.1:5000 -m 3 -r zap-report.html -w zap-report.md -J zap-report.json
+
+      - name: Collect ZAP report files
+        if: always()
+        run: |
+          mkdir -p zap-report
+          for file in zap-report.html zap-report.md zap-report.json; do
+            if [ -f "$file" ]; then
+              cp "$file" "zap-report/$file"
+            fi
+          done
+          if [ -f flask.log ]; then
+            cp flask.log zap-report/flask.log
+          fi
+
+      - name: Upload ZAP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report
+          path: zap-report
+          if-no-files-found: warn
+
+  fail-on-critical:
+    name: Fail on Critical Vulnerabilities
+    needs:
+      - test
+      - codeql
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.codeql.result == 'success' && (github.event_name == 'push' || github.event_name == 'pull_request') }}
+    permissions:
+      security-events: read
+      contents: read
+    steps:
+      - name: Check for critical CodeQL alerts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const ref = context.eventName === "pull_request"
+              ? context.payload.pull_request.head.sha
+              : context.sha;
+
+            let criticalCount = 0;
+
+            // Alerts can take a short time to be queryable after analyze uploads results.
+            for (let attempt = 1; attempt <= 6; attempt++) {
+              const alerts = await github.paginate(
+                "GET /repos/{owner}/{repo}/code-scanning/alerts",
+                {
+                  owner,
+                  repo,
+                  state: "open",
+                  ref,
+                  severity: "critical",
+                  per_page: 100
+                }
+              );
+
+              criticalCount = alerts.length;
+              core.info(`Attempt ${attempt}: ${criticalCount} open critical alert(s) on ${ref}.`);
+              if (criticalCount > 0 || attempt === 6) {
+                break;
+              }
+              await new Promise((resolve) => setTimeout(resolve, 10000));
+            }
+
+            if (criticalCount > 0) {
+              core.setFailed(`Found ${criticalCount} open critical CodeQL alert(s).`);
+            } else {
+              core.info("No open critical CodeQL alerts found.");
+            }

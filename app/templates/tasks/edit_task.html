@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Edit Task{% endblock %}
+{% block content %}
+<section class="card">
+    <h2>Edit Task</h2>
+    <form method="POST">
+        {# Security fix (CSRF): token required for task edit form. #}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="title">Task title</label>
+        <input id="title" name="title" type="text" value="{{ task.title }}" required>
+
+        <label class="checkbox">
+            <input name="completed" type="checkbox" {% if task.completed %}checked{% endif %}>
+            Completed
+        </label>
+
+        <button type="submit">Save Changes</button>
+    </form>
+    <p><a href="{{ url_for('tasks.index') }}">Back to tasks</a></p>
+</section>
+{% endblock %}
