@@ -20,10 +20,10 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -35,8 +35,7 @@ jobs:
 
       - name: Run tests
         run: |
-          # Uses unittest discovery so CI still executes even when test count is small.
-          python -m unittest discover -s . -p "test*.py" -v
+          python -m unittest discover -s tests -p "test*.py" -v
 
   codeql:
     name: CodeQL SAST
@@ -47,16 +46,16 @@ jobs:
       security-events: write
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: python
           queries: security-extended,security-and-quality
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
 
   zap-baseline:
     name: OWASP ZAP Baseline Scan
@@ -64,10 +63,10 @@ jobs:
     needs: test
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -91,20 +90,24 @@ jobs:
           exit 1
 
       - name: Run ZAP baseline scan
-        continue-on-error: true
         run: |
           mkdir -p zap-report
-          docker run --rm --network host -v "${{ github.workspace }}:/zap/wrk/:rw" ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://127.0.0.1:5000 -m 3 -I -r zap-report.html -w zap-report.md -J zap-report.json
+          docker run --rm --network host \
+            -v "${{ github.workspace }}:/zap/wrk/:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://127.0.0.1:5000 -m 3 -I \
+            -r /zap/wrk/zap-report/zap-report.html \
+            -w /zap/wrk/zap-report/zap-report.md \
+            -J /zap/wrk/zap-report/zap-report.json || true
 
       - name: Collect ZAP report files
         if: always()
         run: |
           mkdir -p zap-report
-          for file in zap-report.html zap-report.md zap-report.json; do
-            if [ -f "$file" ]; then
-              cp "$file" "zap-report/$file"
-            fi
-          done
+          # Ensure artifact always has useful files, even if ZAP had scan issues.
+          [ -f zap-report/zap-report.html ] || echo "<html><body><h1>ZAP report missing</h1></body></html>" > zap-report/zap-report.html
+          [ -f zap-report/zap-report.md ] || echo "# ZAP report missing" > zap-report/zap-report.md
+          [ -f zap-report/zap-report.json ] || echo "{}" > zap-report/zap-report.json
           if [ -f flask.log ]; then
             cp flask.log zap-report/flask.log
           fi
@@ -129,7 +132,7 @@ jobs:
       contents: read
     steps:
       - name: Check for critical CodeQL alerts
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const owner = context.repo.owner;
