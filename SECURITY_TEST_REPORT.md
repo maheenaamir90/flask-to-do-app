@@ -1,5 +1,7 @@
 # Security Test Report - Flask To-Do App
 
+Last updated: 2026-04-09
+
 ## Scope
 
 This report summarizes security verification for the Flask To-Do app after implementing:
@@ -83,3 +85,4 @@ Relevant jobs: `codeql`, `zap-baseline`, `fail-on-critical`
 
 The Flask To-Do app now has concrete protections for IDOR, CSRF, and clickjacking implemented in code and integrated into CI security testing.  
 Residual work for stronger assurance: add explicit automated authorization test cases for cross-user task access and keep reviewing ZAP/CodeQL outputs on every PR.
+last updated
