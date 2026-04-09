@@ -7,6 +7,8 @@ from app.models import Task, User
 class SecurityTests(unittest.TestCase):
     def setUp(self):
         self.app = create_app()
+        # Use in-memory DB for isolated, clean test runs.
+        self.app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
         # Disable CSRF in tests so form posts can be exercised directly.
         self.app.config["WTF_CSRF_ENABLED"] = False
         self.app.config["TESTING"] = True
@@ -36,6 +38,7 @@ class SecurityTests(unittest.TestCase):
     def tearDown(self):
         db.session.remove()
         db.drop_all()
+        db.engine.dispose()
         self.ctx.pop()
 
     def login(self, username, password):
@@ -70,6 +73,8 @@ if __name__ == "__main__":
 class CsrfEnforcementTests(unittest.TestCase):
     def setUp(self):
         self.app = create_app()
+        # Use in-memory DB for isolated, clean test runs.
+        self.app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
         self.app.config["TESTING"] = True
         # Keep CSRF enabled for this test case on purpose.
         self.app.config["WTF_CSRF_ENABLED"] = True
@@ -90,6 +95,7 @@ class CsrfEnforcementTests(unittest.TestCase):
     def tearDown(self):
         db.session.remove()
         db.drop_all()
+        db.engine.dispose()
         self.ctx.pop()
 
     def test_create_task_without_csrf_token_is_rejected(self):
