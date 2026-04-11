@@ -1,0 +1,307 @@
+<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Final Report</title><style>body{font-family:Segoe UI,Arial,sans-serif;line-height:1.6;max-width:980px;margin:30px auto;padding:0 20px;color:#111}h1,h2,h3{color:#0f172a}h1{border-bottom:2px solid #e2e8f0;padding-bottom:8px}h2{margin-top:28px;border-left:4px solid #2563eb;padding-left:10px}table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}th,td{border:1px solid #cbd5e1;padding:8px;vertical-align:top}th{background:#f1f5f9;text-align:left}code{background:#f8fafc;border:1px solid #e2e8f0;padding:2px 5px;border-radius:4px}pre{background:#0b1020;color:#e2e8f0;padding:12px;border-radius:8px;overflow-x:auto}hr{border:none;border-top:1px solid #cbd5e1;margin:28px 0}.muted{color:#64748b;font-size:13px}.placeholder{background:#fff7ed;border:1px dashed #fb923c;padding:8px 10px;border-radius:6px;color:#9a3412}@media print{body{max-width:none;margin:0;padding:0 12mm}h2{break-after:avoid}table,pre{break-inside:avoid}}</style></head><body><h1 id="final-report">Final Report</h1>
+<h2 id="cyc386-secure-software-design-and-development">CYC386 Secure Software Design and Development</h2>
+<h3 id="midterm-lab-exam-48-hour-devsecops-security-sprint">Midterm Lab Exam - 48-Hour DevSecOps Security Sprint</h3>
+<p><strong>Project:</strong> Flask To-Do Application Security Hardening<br />
+<strong>Course:</strong> CYC386<br />
+<strong>Semester:</strong> Spring 2026<br />
+<strong>Instructor:</strong> Engr. Muhammad Ahmad Nawaz  </p>
+<hr />
+<h2 id="abstract">Abstract</h2>
+<p>This report presents the security engineering work completed for a Flask To-Do web application under a 48-hour DevSecOps sprint. The project objective was to identify and mitigate critical web risks aligned with OWASP Top 10, specifically Insecure Direct Object Reference (IDOR), Cross-Site Request Forgery (CSRF), and Clickjacking. The team performed protection needs elicitation (PNE), threat modeling using STRIDE, and risk scoring using CVSS v3.1. Security controls were implemented directly in application routes, templates, and configuration. A CI/CD pipeline was built in GitHub Actions to run automated tests, static analysis (CodeQL), dynamic analysis (OWASP ZAP baseline), and a release gate for critical findings. Results demonstrate practical hardening of object authorization, request integrity, and browser security headers, improving the application's resistance to common web attacks while maintaining development workflow quality.</p>
+<hr />
+<h2 id="1-introduction">1. Introduction</h2>
+<p>Modern web applications often fail due to access control and request integrity weaknesses rather than cryptographic failures. Even simple CRUD systems can expose severe vulnerabilities when object-level authorization and browser security controls are missing or weak. This sprint treated the Flask To-Do app as a real pre-production candidate requiring rapid but reliable hardening.</p>
+<p>The target system supports:
+- user registration and login
+- task creation, editing, listing, and deletion
+- session-based authentication</p>
+<p>Because each task is user-owned data, secure object access is critical. The project therefore prioritized:
+1. verifying ownership before object operations (IDOR mitigation),
+2. enforcing anti-CSRF protection on state-changing requests,
+3. preventing framing-based UI attacks via response headers.</p>
+<p>In addition to code-level fixes, the work integrated DevSecOps practices through Git branching, pull request workflow, automated security scans, and vulnerability gating in CI.</p>
+<p><strong>Screenshot Placeholder - Project Overview:</strong><br />
+<code>[Insert screenshot of app home/tasks page here]</code></p>
+<hr />
+<h2 id="2-protection-needs-elicitation-pne">2. Protection Needs Elicitation (PNE)</h2>
+<h3 id="21-assets">2.1 Assets</h3>
+<table>
+<thead>
+<tr>
+<th>Asset</th>
+<th>Description</th>
+<th>Protection Need</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>User Accounts</td>
+<td><code>username</code>, <code>password_hash</code>, authenticated identity</td>
+<td>Confidentiality, integrity</td>
+</tr>
+<tr>
+<td>Task Data</td>
+<td><code>title</code>, <code>completed</code>, <code>created_at</code>, <code>user_id</code></td>
+<td>Confidentiality, integrity, availability</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>SQLite store (<code>todo.db</code>) for users/tasks</td>
+<td>Integrity, availability</td>
+</tr>
+<tr>
+<td>Session Cookies</td>
+<td>Browser session for logged-in users</td>
+<td>Confidentiality, integrity</td>
+</tr>
+<tr>
+<td>CI/CD Workflow</td>
+<td>Build, security scan, release gating</td>
+<td>Integrity, traceability</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-threat-context">2.2 Threat Context</h3>
+<p>The app has multiple state-changing endpoints and user-owned objects. Main risk drivers:
+- predictable object identifiers (<code>task_id</code>) in URL paths
+- form-based POST actions
+- browser-executed UI in potentially hostile web contexts</p>
+<h3 id="23-elicited-security-requirements">2.3 Elicited Security Requirements</h3>
+<ol>
+<li>Enforce object-level authorization using authenticated owner identity on each task operation.</li>
+<li>Protect all unsafe requests with CSRF tokens validated server-side.</li>
+<li>Set anti-clickjacking headers for all HTTP responses.</li>
+<li>Harden session cookie behavior (<code>SameSite</code>) to reduce cross-site abuse.</li>
+<li>Run SAST + DAST automatically on every push/PR.</li>
+<li>Fail pipeline on critical security findings.</li>
+</ol>
+<p><strong>Screenshot Placeholder - PNE Artifact:</strong><br />
+<code>[Insert screenshot of PNE_Report.md section here]</code></p>
+<hr />
+<h2 id="3-stride-dfd-attack-tree">3. STRIDE + DFD + Attack Tree</h2>
+<h3 id="31-stride-summary">3.1 STRIDE Summary</h3>
+<table>
+<thead>
+<tr>
+<th>STRIDE</th>
+<th>App-Specific Threat</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Spoofing</td>
+<td>Unauthorized login/session misuse</td>
+<td>Account compromise</td>
+<td>Password hashing, authenticated routes</td>
+</tr>
+<tr>
+<td>Tampering</td>
+<td>Foreign task edit/delete via IDOR</td>
+<td>Data integrity loss</td>
+<td>User-scoped task lookup (<code>id + user_id</code>)</td>
+</tr>
+<tr>
+<td>Repudiation</td>
+<td>User denies sensitive action</td>
+<td>Forensic gap</td>
+<td>(Future) add audit logging</td>
+</tr>
+<tr>
+<td>Information Disclosure</td>
+<td>Cross-user task exposure</td>
+<td>Privacy breach</td>
+<td>Ownership checks + per-user filtering</td>
+</tr>
+<tr>
+<td>Denial of Service</td>
+<td>Endpoint flooding</td>
+<td>Service degradation</td>
+<td>(Future) rate limiting</td>
+</tr>
+<tr>
+<td>Elevation of Privilege</td>
+<td>User performs unauthorized actions</td>
+<td>Access boundary bypass</td>
+<td>Object authorization enforcement</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-data-flow-diagram-textual">3.2 Data Flow Diagram (Textual)</h3>
+<pre><code class="language-text">Browser
+  -&gt; Auth routes (/register, /login, /logout)
+  -&gt; Task routes (/, /tasks/create, /tasks/&lt;id&gt;/edit, /tasks/&lt;id&gt;/delete)
+Flask App (Blueprints + Flask-Login + CSRFProtect + response headers)
+  -&gt; SQLAlchemy Models (User, Task)
+  -&gt; SQLite DB (todo.db)
+</code></pre>
+<h3 id="33-attack-tree-unauthorized-task-access">3.3 Attack Tree (Unauthorized Task Access)</h3>
+<pre><code class="language-text">Goal: Access/modify another user's task
+  OR
+   |- Manipulate task_id in edit/delete endpoint (IDOR)
+   |- Trigger victim POST via malicious site (CSRF)
+   |- Frame UI and trick clicks (Clickjacking)
+</code></pre>
+<p><strong>Screenshot Placeholder - Threat Model Evidence:</strong><br />
+<code>[Insert screenshot of THREAT_MODEL.pdf or app/THREATMODEL.md here]</code></p>
+<hr />
+<h2 id="4-cvss-risk-assessment-v31">4. CVSS Risk Assessment (v3.1)</h2>
+<table>
+<thead>
+<tr>
+<th>Vulnerability</th>
+<th style="text-align: right;">Base Score</th>
+<th>Severity</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IDOR</td>
+<td style="text-align: right;">6.5</td>
+<td>Medium</td>
+<td>Authenticated attacker can target foreign objects by ID</td>
+</tr>
+<tr>
+<td>CSRF</td>
+<td style="text-align: right;">8.8</td>
+<td>High</td>
+<td>Victim-assisted unauthorized state changes across forms</td>
+</tr>
+<tr>
+<td>Clickjacking</td>
+<td style="text-align: right;">5.4</td>
+<td>Medium</td>
+<td>UI redress depends on user interaction</td>
+</tr>
+</tbody>
+</table>
+<p>These scores guided implementation priority: CSRF and IDOR were treated as immediate fixes; clickjacking was addressed as a browser-layer hardening control.</p>
+<p><strong>Screenshot Placeholder - CVSS Table:</strong><br />
+<code>[Insert screenshot of CVSS section from threat model/report here]</code></p>
+<hr />
+<h2 id="5-vulnerability-findings-idor-csrf-clickjacking">5. Vulnerability Findings (IDOR / CSRF / Clickjacking)</h2>
+<h3 id="51-idor">5.1 IDOR</h3>
+<p><strong>Finding:</strong> Task object access risk existed if <code>task_id</code> was handled without strict owner scoping.<br />
+<strong>Exploitation scenario:</strong> Authenticated user attempts <code>/tasks/&lt;foreign_id&gt;/edit</code> or delete.<br />
+<strong>Security requirement:</strong> Query must include both target ID and authenticated user owner ID.</p>
+<h3 id="52-csrf">5.2 CSRF</h3>
+<p><strong>Finding:</strong> Form submissions are vulnerable if no anti-CSRF token validation is enforced.<br />
+<strong>Exploitation scenario:</strong> Victim visits attacker page that auto-submits POST requests.<br />
+<strong>Security requirement:</strong> Enable global CSRF validation and include hidden token in every unsafe form.</p>
+<h3 id="53-clickjacking">5.3 Clickjacking</h3>
+<p><strong>Finding:</strong> Browser can be tricked into clicking hidden controls if framing is allowed.<br />
+<strong>Exploitation scenario:</strong> App embedded in attacker iframe with deceptive overlay.<br />
+<strong>Security requirement:</strong> Add <code>X-Frame-Options: DENY</code> and CSP <code>frame-ancestors 'none'</code>.</p>
+<p><strong>Screenshot Placeholder - Before/After Findings:</strong><br />
+<code>[Insert screenshot of findings table or issue tracker notes here]</code></p>
+<hr />
+<h2 id="6-security-implementation-code-level">6. Security Implementation (Code-Level)</h2>
+<h3 id="61-idor-fix">6.1 IDOR Fix</h3>
+<p>Implemented in <code>app/routes/tasks.py</code>:</p>
+<pre><code class="language-python">def _get_user_task_or_404(task_id):
+    return Task.query.filter_by(id=task_id, user_id=current_user.id).first_or_404()
+</code></pre>
+<p>Result: foreign task IDs no longer resolve for non-owners.</p>
+<h3 id="62-csrf-fix">6.2 CSRF Fix</h3>
+<p>Implemented in <code>app/__init__.py</code>:</p>
+<pre><code class="language-python">from flask_wtf.csrf import CSRFProtect
+csrf = CSRFProtect()
+csrf.init_app(app)
+</code></pre>
+<p>Implemented in templates (example):</p>
+<pre><code class="language-html">&lt;input type=&quot;hidden&quot; name=&quot;csrf_token&quot; value=&quot;{{ csrf_token() }}&quot;&gt;
+</code></pre>
+<p>Added in login/register/create/edit/delete/logout forms.<br />
+Session hardening in <code>config.py</code>:</p>
+<pre><code class="language-python">SESSION_COOKIE_SAMESITE = &quot;Lax&quot;
+</code></pre>
+<h3 id="63-clickjacking-fix">6.3 Clickjacking Fix</h3>
+<p>Implemented in <code>app/__init__.py</code>:</p>
+<pre><code class="language-python">@app.after_request
+def add_security_headers(response):
+    response.headers[&quot;X-Frame-Options&quot;] = &quot;DENY&quot;
+    response.headers[&quot;Content-Security-Policy&quot;] = &quot;frame-ancestors 'none'&quot;
+    return response
+</code></pre>
+<h3 id="64-additional-test-evidence">6.4 Additional Test Evidence</h3>
+<p><code>tests/test_security.py</code> includes:
+- unauthenticated redirect check
+- owner-only task visibility
+- IDOR block on foreign task
+- CSRF rejection on task create without token
+- CSRF rejection on logout without token</p>
+<p><strong>Screenshot Placeholder - Code Fixes:</strong><br />
+<code>[Insert screenshots of key code blocks from routes/templates/config here]</code></p>
+<hr />
+<h2 id="7-cicd-pipeline-details">7. CI/CD Pipeline Details</h2>
+<p>Pipeline file: <code>.github/workflows/ci-cd.yml</code></p>
+<h3 id="71-trigger-strategy">7.1 Trigger Strategy</h3>
+<ul>
+<li>On every <code>push</code></li>
+<li>On every <code>pull_request</code></li>
+</ul>
+<h3 id="72-jobs-implemented">7.2 Jobs Implemented</h3>
+<ol>
+<li><strong>Install Dependencies and Run Tests</strong></li>
+<li><strong>CodeQL SAST</strong></li>
+<li><strong>OWASP ZAP Baseline Scan</strong></li>
+<li><strong>Fail on Critical Vulnerabilities</strong> (gate)</li>
+</ol>
+<h3 id="73-security-gate">7.3 Security Gate</h3>
+<p>The pipeline includes a gate that checks GitHub code scanning alerts and fails when open critical alerts exist for the target ref.</p>
+<h3 id="74-artifact-evidence">7.4 Artifact Evidence</h3>
+<p>ZAP job uploads <code>zap-baseline-report</code> artifact containing report files and optional runtime log.</p>
+<p><strong>Screenshot Placeholder - Workflow Runs:</strong><br />
+<code>[Insert GitHub Actions run screenshot with all jobs here]</code></p>
+<hr />
+<h2 id="8-sast-dast-results-beforeafter">8. SAST + DAST Results (Before/After)</h2>
+<h3 id="81-sast-codeql">8.1 SAST (CodeQL)</h3>
+<p><strong>Before fixes:</strong> Access-control and request-integrity weaknesses were present in implementation design.<br />
+<strong>After fixes:</strong> Code reflects user-scoped authorization, CSRF-protected forms, and anti-clickjacking headers. Critical vulnerability gate is active in CI.</p>
+<h3 id="82-dast-owasp-zap-baseline">8.2 DAST (OWASP ZAP Baseline)</h3>
+<p><strong>Before fixes:</strong> Expected higher browser/security header concerns and practical exposure around unsafe form actions.<br />
+<strong>After fixes:</strong> Security headers and CSRF controls are in place; ZAP baseline reports are generated through CI artifact upload.</p>
+<h3 id="83-test-run-evidence">8.3 Test Run Evidence</h3>
+<p>Local test output confirms 5 security tests passing.</p>
+<p><strong>Screenshot Placeholder - Security Testing Evidence:</strong><br />
+<code>[Insert screenshot of unittest output]</code><br />
+<code>[Insert screenshot of CodeQL results page]</code><br />
+<code>[Insert screenshot of ZAP artifact/report files]</code></p>
+<hr />
+<h2 id="9-conclusion-and-future-hardening">9. Conclusion and Future Hardening</h2>
+<p>This sprint achieved the required security objectives for the Flask To-Do app:
+- IDOR mitigation via strict object ownership checks
+- CSRF mitigation via global middleware and form tokens
+- Clickjacking mitigation via response headers
+- CI/CD security automation with SAST, DAST, and critical gating</p>
+<p>The current system is significantly more attack-resistant than the baseline implementation and demonstrates practical DevSecOps alignment with CYC386 lab outcomes.</p>
+<h3 id="future-hardening-recommendations">Future Hardening Recommendations</h3>
+<ol>
+<li>Add login rate limiting and abuse controls.</li>
+<li>Add structured audit logging for auth and task events.</li>
+<li>Disable <code>debug=True</code> in production execution path.</li>
+<li>Add integration tests for full authenticated multi-user attack scenarios.</li>
+<li>Expand DAST with authenticated scan profiles.</li>
+</ol>
+<hr />
+<h2 id="references">References</h2>
+<ol>
+<li>OWASP Top 10 - Web Application Security Risks.  </li>
+<li>CVSS v3.1 Specification Document.  </li>
+<li>Flask Security and Flask-WTF CSRF documentation.  </li>
+<li>GitHub Actions / CodeQL documentation.  </li>
+<li>OWASP ZAP Baseline Scan documentation.</li>
+</ol>
+<hr />
+<h2 id="appendix-a-evidence-checklist-fill-during-submission">Appendix A - Evidence Checklist (Fill During Submission)</h2>
+<ul>
+<li>[ ] PR created and reviewer assigned (screenshot attached)</li>
+<li>[ ] Actions run with required jobs (screenshot attached)</li>
+<li>[ ] CodeQL result page captured</li>
+<li>[ ] ZAP artifact downloaded and attached</li>
+<li>[ ] <code>THREAT_MODEL.pdf</code> present in repo root</li>
+<li>[ ] <code>Final_Report.pdf</code> exported from this report</li>
+<li>[ ] Demo video recorded (5-7 minutes)</li>
+</ul><p class='muted'>Generated from Final_Report.md</p></body></html>
