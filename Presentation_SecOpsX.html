@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecOpsX — Secure Software Design & Development</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { overflow: hidden; height: 100%; background: #05080A; color: #fff; font-family: 'Inter', sans-serif; }
+  ::selection { background: rgba(198,249,31,0.3); color: #c6f91f; }
+  .font-geist { font-family: 'Geist', sans-serif; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  @keyframes reveal {
+    from { opacity: 0; transform: translateY(30px); filter: blur(10px); }
+    to { opacity: 1; transform: translateY(0); filter: blur(0); }
+  }
+  @keyframes revealLeft {
+    from { opacity: 0; transform: translateX(-40px); filter: blur(8px); }
+    to { opacity: 1; transform: translateX(0); filter: blur(0); }
+  }
+  @keyframes revealRight {
+    from { opacity: 0; transform: translateX(40px); filter: blur(8px); }
+    to { opacity: 1; transform: translateX(0); filter: blur(0); }
+  }
+  @keyframes revealScale {
+    from { opacity: 0; transform: scale(0.9); filter: blur(6px); }
+    to { opacity: 1; transform: scale(1); filter: blur(0); }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(198,249,31,0.1); }
+    50% { box-shadow: 0 0 40px rgba(198,249,31,0.25); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  @keyframes typewriter {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+  @keyframes blink {
+    50% { border-color: transparent; }
+  }
+  @keyframes slideInTop {
+    from { opacity: 0; transform: translateY(-60px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes countUp {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes drawLine {
+    from { stroke-dashoffset: 1000; }
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes progressBar {
+    from { width: 0%; }
+    to { width: var(--target-width); }
+  }
+
+  .slide { 
+    position: absolute; inset: 0; 
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.6s cubic-bezier(0.25,0.46,0.45,0.94);
+  }
+  .slide.active { opacity: 1; pointer-events: all; }
+  .slide.active .anim-reveal { animation: reveal 0.8s cubic-bezier(0.2,0.8,0.2,1) both; }
+  .slide.active .anim-left { animation: revealLeft 0.8s cubic-bezier(0.2,0.8,0.2,1) both; }
+  .slide.active .anim-right { animation: revealRight 0.8s cubic-bezier(0.2,0.8,0.2,1) both; }
+  .slide.active .anim-scale { animation: revealScale 0.8s cubic-bezier(0.2,0.8,0.2,1) both; }
+  .slide.active .anim-top { animation: slideInTop 0.7s cubic-bezier(0.2,0.8,0.2,1) both; }
+  .slide.active .delay-1 { animation-delay: 0.15s; }
+  .slide.active .delay-2 { animation-delay: 0.3s; }
+  .slide.active .delay-3 { animation-delay: 0.45s; }
+  .slide.active .delay-4 { animation-delay: 0.6s; }
+  .slide.active .delay-5 { animation-delay: 0.75s; }
+  .slide.active .delay-6 { animation-delay: 0.9s; }
+  .slide.active .delay-7 { animation-delay: 1.05s; }
+  .slide.active .delay-8 { animation-delay: 1.2s; }
+
+  .code-block {
+    background: #0B0F13; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px; line-height: 1.7; overflow-x: auto;
+  }
+  .code-block .keyword { color: #c6f91f; }
+  .code-block .string { color: #7dd3fc; }
+  .code-block .comment { color: #475569; font-style: italic; }
+  .code-block .func { color: #fbbf24; }
+  .code-block .param { color: #a78bfa; }
+  .code-block .decorator { color: #f472b6; }
+  .code-block .number { color: #fb923c; }
+
+  .table-custom { border-collapse: separate; border-spacing: 0; }
+  .table-custom th { 
+    background: rgba(198,249,31,0.08); color: #c6f91f; 
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 10px 16px; text-align: left; border-bottom: 1px solid rgba(198,249,31,0.15);
+  }
+  .table-custom td { 
+    padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 13px; color: rgba(255,255,255,0.8);
+  }
+  .table-custom tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .tag { 
+    display: inline-flex; align-items: center; padding: 3px 10px; 
+    border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.03em;
+  }
+  .tag-high { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+  .tag-medium { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
+  .tag-low { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
+  .tag-mitigated { background: rgba(198,249,31,0.12); color: #c6f91f; border: 1px solid rgba(198,249,31,0.2); }
+  .tag-residual { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
+
+  .nav-dot { 
+    width: 8px; height: 8px; border-radius: 50%; 
+    background: rgba(255,255,255,0.15); cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .nav-dot.active { background: #c6f91f; box-shadow: 0 0 12px rgba(198,249,31,0.4); width: 24px; border-radius: 4px; }
+  .nav-dot:hover:not(.active) { background: rgba(255,255,255,0.35); }
+
+  .slide-number {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #c6f91f, #a8e600, #c6f91f);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+  }
+
+  .accent-border { border-left: 2px solid #c6f91f; }
+
+  .progress-bar-container {
+    height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%; background: #c6f91f; border-radius: 2px;
+    transition: width 0.8s cubic-bezier(0.2,0.8,0.2,1);
+  }
+
+  .pipeline-node {
+    position: relative; padding: 16px 20px; border-radius: 12px;
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    transition: all 0.3s ease;
+  }
+  .pipeline-node:hover { border-color: rgba(198,249,31,0.3); background: rgba(198,249,31,0.03); }
+  .pipeline-connector {
+    width: 40px; display: flex; align-items: center; justify-content: center;
+  }
+
+  .kbd {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 2px 8px; border-radius: 6px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    font-size: 11px; font-family: 'Inter', sans-serif; color: rgba(255,255,255,0.6);
+    min-width: 24px;
+  }
+
+  @media (max-width: 768px) {
+    .slide-content { padding: 24px !important; }
+    .code-block { font-size: 11px; }
+    .table-custom th, .table-custom td { padding: 6px 10px; font-size: 11px; }
+  }
+</style>
+</head>
+<body class="no-scrollbar">
+
+<!-- Background noise texture -->
+<div style="position:fixed;inset:0;opacity:0.03;pointer-events:none;z-index:0;">
+  <svg width="100%" height="100%"><filter id="noise"><feTurbulence baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#noise)"/></svg>
+</div>
+
+<!-- Top accent line -->
+<div style="position:fixed;top:0;left:0;right:0;height:1px;background:linear-gradient(to right, transparent, rgba(198,249,31,0.3), transparent);z-index:100;"></div>
+
+<!-- Top bar -->
+<div style="position:fixed;top:0;left:0;right:0;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;z-index:90;background:rgba(5,8,10,0.8);backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,0.05);">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="width:28px;height:28px;border-radius:8px;background:#c6f91f;display:flex;align-items:center;justify-content:center;">
+      <i data-lucide="shield-check" style="width:16px;height:16px;color:#05080A;"></i>
+    </div>
+    <span class="font-geist" style="font-size:14px;font-weight:600;letter-spacing:-0.02em;">SecOpsX</span>
+    <span style="color:rgba(255,255,255,0.2);font-size:12px;">|</span>
+    <span style="font-size:12px;color:rgba(255,255,255,0.4);">CYC386 Final Report</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span class="slide-number" style="font-size:12px;color:rgba(255,255,255,0.4);" id="slideCounter">01 / 14</span>
+    <div style="width:1px;height:16px;background:rgba(255,255,255,0.1);"></div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="kbd">←</span>
+      <span class="kbd">→</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.3);margin-left:4px;">Navigate</span>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom navigation -->
+<div style="position:fixed;bottom:0;left:0;right:0;height:56px;display:flex;align-items:center;justify-content:center;gap:8px;z-index:90;background:rgba(5,8,10,0.8);backdrop-filter:blur(24px);border-top:1px solid rgba(255,255,255,0.05);">
+  <div id="navDots" style="display:flex;align-items:center;gap:6px;"></div>
+</div>
+
+<!-- Progress bar -->
+<div style="position:fixed;top:56px;left:0;right:0;z-index:91;">
+  <div class="progress-bar-container">
+    <div class="progress-bar-fill" id="progressBar" style="width:7.14%;"></div>
+  </div>
+</div>
+
+<!-- SLIDES CONTAINER -->
+<div id="slidesContainer" style="position:relative;width:100%;height:100%;padding-top:56px;padding-bottom:56px;">
+
+  <!-- ==================== SLIDE 1: TITLE ==================== -->
+  <div class="slide active" data-slide="0">
+    <div style="text-align:center;max-width:800px;padding:0 32px;">
+      <div class="anim-top" style="margin-bottom:32px;">
+        <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:999px;background:rgba(198,249,31,0.08);border:1px solid rgba(198,249,31,0.15);">
+          <div style="width:6px;height:6px;border-radius:50%;background:#c6f91f;animation:pulse-glow 2s infinite;"></div>
+          <span style="font-size:12px;color:#c6f91f;font-weight:500;letter-spacing:0.05em;">COMSATS UNIVERSITY ISLAMABAD — CYBER SECURITY</span>
+        </div>
+      </div>
+      <h1 class="font-geist anim-reveal delay-1" style="font-size:clamp(48px,8vw,96px);font-weight:600;line-height:0.95;letter-spacing:-0.04em;margin-bottom:16px;">
+        <span class="gradient-text">SecOpsX</span>
+      </h1>
+      <p class="anim-reveal delay-2" style="font-size:clamp(16px,2vw,22px);font-weight:300;color:rgba(255,255,255,0.5);letter-spacing:-0.01em;margin-bottom:48px;">
+        Secure Software Design & Development — Final Report
+      </p>
+      <div class="anim-scale delay-3" style="display:flex;justify-content:center;gap:0;margin-bottom:48px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;background:rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
+          <div style="padding:20px 32px;background:#0B0F13;text-align:left;">
+            <div style="font-size:14px;font-weight:500;color:#fff;margin-bottom:4px;">Maheen Aamir</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.35);font-family:monospace;">SP23-BCT-027</div>
+          </div>
+          <div style="padding:20px 32px;background:#0B0F13;text-align:left;">
+            <div style="font-size:14px;font-weight:500;color:#fff;margin-bottom:4px;">Malik Muhammad Huzaifa</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.35);font-family:monospace;">SP23-BCT-029</div>
+          </div>
+          <div style="padding:20px 32px;background:#0B0F13;text-align:left;">
+            <div style="font-size:14px;font-weight:500;color:#fff;margin-bottom:4px;">Muzamil Ali Akhtar</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.35);font-family:monospace;">SP23-BCT-043</div>
+          </div>
+          <div style="padding:20px 32px;background:#0B0F13;text-align:left;">
+            <div style="font-size:14px;font-weight:500;color:#fff;margin-bottom:4px;">Maryum Masood</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.35);font-family:monospace;">SP23-BCT-031</div>
+          </div>
+        </div>
+      </div>
+      <div class="anim-reveal delay-5" style="display:flex;align-items:center;justify-content:center;gap:6px;color:rgba(255,255,255,0.25);font-size:12px;">
+        <span>Supervised by</span>
+        <span style="color:rgba(255,255,255,0.5);font-weight:500;">Engr Muhammad Ahmad Nawaz</span>
+      </div>
+      <div class="anim-reveal delay-6" style="margin-top:24px;">
+        <div style="display:inline-flex;align-items:center;gap:6px;color:rgba(255,255,255,0.2);font-size:12px;animation:float 3s ease-in-out infinite;">
+          <i data-lucide="chevron-down" style="width:14px;height:14px;"></i>
+          <span>Press → to begin</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 2: PROJECT OVERVIEW ==================== -->
+  <div class="slide" data-slide="1">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;">
+      <div>
+        <div class="anim-left" style="display:flex;align-items:center;gap:8px;margin-bottom:20px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Overview</span>
+        </div>
+        <h2 class="font-geist anim-left delay-1" style="font-size:clamp(28px,4vw,40px);font-weight:300;line-height:1.15;letter-spacing:-0.03em;margin-bottom:24px;">
+          48-Hour <span style="color:#c6f91f;font-weight:500;">DevSecOps</span> Security Sprint
+        </h2>
+        <p class="anim-left delay-2" style="font-size:15px;font-weight:300;line-height:1.7;color:rgba(255,255,255,0.6);margin-bottom:20px;">
+          Modern web applications are increasingly targeted through vulnerabilities arising from improper access control, object-level authorization flaws, and weak request integrity — not cryptographic failures.
+        </p>
+        <p class="anim-left delay-3" style="font-size:15px;font-weight:300;line-height:1.7;color:rgba(255,255,255,0.6);">
+          This project presents a comprehensive security hardening workflow applied to a Flask-based To-Do application, simulating a real-world secure SDLC within a time-constrained agile sprint.
+        </p>
+      </div>
+      <div class="anim-right delay-2">
+        <div class="glass-card" style="padding:28px;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:20px;">Target System</div>
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);">
+              <div style="width:36px;height:36px;border-radius:8px;background:rgba(198,249,31,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i data-lucide="server" style="width:16px;height:16px;color:#c6f91f;"></i>
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:500;">Flask To-Do Application</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.4);">Session-based CRUD web app</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);">
+              <div style="width:36px;height:36px;border-radius:8px;background:rgba(198,249,31,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i data-lucide="database" style="width:16px;height:16px;color:#c6f91f;"></i>
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:500;">SQLite + SQLAlchemy ORM</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.4);">User-scoped task records</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);">
+              <div style="width:36px;height:36px;border-radius:8px;background:rgba(198,249,31,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i data-lucide="git-branch" style="width:16px;height:16px;color:#c6f91f;"></i>
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:500;">GitHub Actions CI/CD</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.4);">Automated security pipeline</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);">
+              <div style="width:36px;height:36px;border-radius:8px;background:rgba(198,249,31,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i data-lucide="shield-alert" style="width:16px;height:16px;color:#c6f91f;"></i>
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:500;">OWASP Top 10 Aligned</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.4);">IDOR · CSRF · Clickjacking</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 3: OBJECTIVES ==================== -->
+  <div class="slide" data-slide="2">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;">
+      <div style="text-align:center;margin-bottom:48px;">
+        <div class="anim-top" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Objectives</span>
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+        </div>
+        <h2 class="font-geist anim-reveal delay-1" style="font-size:clamp(28px,4vw,40px);font-weight:300;letter-spacing:-0.03em;">
+          Sprint <span style="color:#c6f91f;font-weight:500;">Objectives</span>
+        </h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;">
+        <div class="glass-card anim-reveal delay-1" style="padding:24px;transition:all 0.3s ease;cursor:default;" onmouseenter="this.style.borderColor='rgba(198,249,31,0.2)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.06)'">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(198,249,31,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#c6f91f;">01</div>
+            <span style="font-size:13px;font-weight:500;">Protection Needs Elicitation</span>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;">Conduct structured asset-based PNE to identify and classify all assets requiring protection.</p>
+        </div>
+        <div class="glass-card anim-reveal delay-2" style="padding:24px;transition:all 0.3s ease;cursor:default;" onmouseenter="this.style.borderColor='rgba(198,249,31,0.2)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.06)'">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(198,249,31,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#c6f91f;">02</div>
+            <span style="font-size:13px;font-weight:500;">STRIDE Threat Modeling</span>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;">Apply STRIDE methodology to systematically decompose the application's attack surface.</p>
+        </div>
+        <div class="glass-card anim-reveal delay-3" style="padding:24px;transition:all 0.3s ease;cursor:default;" onmouseenter="this.style.borderColor='rgba(198,249,31,0.2)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.06)'">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(198,249,31,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#c6f91f;">03</div>
+            <span style="font-size:13px;font-weight:500;">CVSS v3.1 Risk Scoring</span>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;">Quantify identified vulnerabilities using standardized CVSS v3.1 scoring framework.</p>
+        </div>
+        <div class="glass-card anim-reveal delay-4" style="padding:24px;transition:all 0.3s ease;cursor:default;" onmouseenter="this.style.borderColor='rgba(198,249,31,0.2)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.06)'">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(198,249,31,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#c6f91f;">04</div>
+            <span style="font-size:13px;font-weight:500;">Code-Level Security Controls</span>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;">Implement mitigations for IDOR, CSRF, and Clickjacking within 48-hour constraints.</p>
+        </div>
+        <div class="glass-card anim-reveal delay-5" style="padding:24px;transition:all 0.3s ease;cursor:default;" onmouseenter="this.style.borderColor='rgba(198,249,31,0.2)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.06)'">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(198,249,31,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#c6f91f;">05</div>
+            <span style="font-size:13px;font-weight:500;">DevSecOps CI/CD Pipeline</span>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;">Construct multi-stage pipeline integrating SAST, DAST, unit testing, and release gating.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 4: PNE - ASSETS ==================== -->
+  <div class="slide" data-slide="3">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;">
+      <div style="margin-bottom:40px;">
+        <div class="anim-left" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">PNE — Asset Identification</span>
+        </div>
+        <h2 class="font-geist anim-left delay-1" style="font-size:clamp(28px,4vw,40px);font-weight:300;letter-spacing:-0.03em;">
+          Assets & <span style="color:#c6f91f;font-weight:500;">CIA Classification</span>
+        </h2>
+      </div>
+      <div class="anim-scale delay-2" style="overflow-x:auto;border-radius:12px;border:1px solid rgba(255,255,255,0.06);">
+        <table class="table-custom" style="width:100%;">
+          <thead>
+            <tr>
+              <th style="border-radius:11px 0 0 0;">Asset</th>
+              <th>Components</th>
+              <th>CIA</th>
+              <th style="border-radius:0 11px 0 0;">Security Rationale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="font-weight:500;color:#fff;">User Accounts</td>
+              <td><code style="font-size:12px;color:rgba(255,255,255,0.5);">username, password_hash, session_token</code></td>
+              <td><span class="tag tag-high" style="font-size:10px;">C · I</span></td>
+              <td>Compromise enables full account takeover</td>
+            </tr>
+            <tr>
+              <td style="font-weight:500;color:#fff;">Task Data</td>
+              <td><code style="font-size:12px;color:rgba(255,255,255,0.5);">title, status, created_at, user_id</code></td>
+              <td><span class="tag tag-high" style="font-size:10px;">C · I · A</span></td>
+              <td>Cross-user exposure violates privacy & isolation</td>
+            </tr>
+            <tr>
+              <td style="font-weight:500;color:#fff;">Database (todo.db)</td>
+              <td><code style="font-size:12px;color:rgba(255,255,255,0.5);">SQLite persistent store</code></td>
+              <td><span class="tag tag-medium" style="font-size:10px;">I · A</span></td>
+              <td>SQL injection or file access compromises all records</td>
+            </tr>
+            <tr>
+              <td style="font-weight:500;color:#fff;">Session Cookies</td>
+              <td><code style="font-size:12px;color:rgba(255,255,255,0.5);">Browser-managed auth tokens</code></td>
+              <td><span class="tag tag-high" style="font-size:10px;">C · I</span></td>
+              <td>Session hijacking enables unauthorized access</td>
+            </tr>
+            <tr>
+              <td style="font-weight:500;color:#fff;">CI/CD Workflow</td>
+              <td><code style="font-size:12px;color:rgba(255,255,255,0.5);">GitHub Actions, build scripts</code></td>
+              <td><span class="tag tag-low" style="font-size:10px;">I · T</span></td>
+              <td>Pipeline tampering undermines security validation</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="anim-reveal delay-4" style="margin-top:20px;display:flex;gap:24px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:8px;height:8px;border-radius:2px;background:#f87171;"></div>
+          <span style="font-size:12px;color:rgba(255,255,255,0.4);">C = Confidentiality</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:8px;height:8px;border-radius:2px;background:#fbbf24;"></div>
+          <span style="font-size:12px;color:rgba(255,255,255,0.4);">I = Integrity</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:8px;height:8px;border-radius:2px;background:#60a5fa;"></div>
+          <span style="font-size:12px;color:rgba(255,255,255,0.4);">A = Availability</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:8px;height:8px;border-radius:2px;background:#a78bfa;"></div>
+          <span style="font-size:12px;color:rgba(255,255,255,0.4);">T = Traceability</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 5: SECURITY REQUIREMENTS ==================== -->
+  <div class="slide" data-slide="4">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;">
+      <div style="margin-bottom:40px;">
+        <div class="anim-left" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Elicited Requirements</span>
+        </div>
+        <h2 class="font-geist anim-left delay-1" style="font-size:clamp(28px,4vw,40px);font-weight:300;letter-spacing:-0.03em;">
+          Security <span style="color:#c6f91f;font-weight:500;">Requirements</span> (SR-1 → SR-6)
+        </h2>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="glass-card accent-border anim-left delay-1" style="padding:18px 22px;display:flex;gap:16px;align-items:flex-start;">
+          <code style="color:#c6f91f;font-size:13px;font-weight:600;white-space:nowrap;margin-top:2px;">SR-1</code>
+          <p style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.6;">Enforce <span style="color:#fff;font-weight:500;">object-level authorization</span> on every task operation by strictly binding database queries to the authenticated user's identity.</p>
+        </div>
+        <div class="glass-card accent-border anim-left delay-2" style="padding:18px 22px;display:flex;gap:16px;align-items:flex-start;">
+          <code style="color:#c6f91f;font-size:13px;font-weight:600;white-space:nowrap;margin-top:2px;">SR-2</code>
+          <p style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.6;">Protect all <span style="color:#fff;font-weight:500;">unsafe HTTP methods</span> (POST, PUT, DELETE) with cryptographic CSRF tokens validated server-side prior to processing.</p>
+        </div>
+        <div class="glass-card accent-border anim-left delay-3" style="padding:18px 22px;display:flex;gap:16px;align-items:flex-start;">
+          <code style="color:#c6f91f;font-size:13px;font-weight:600;white-space:nowrap;margin-top:2px;">SR-3</code>
+          <p style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.6;">Inject <span style="color:#fff;font-weight:500;">anti-clickjacking HTTP headers</span> (X-Frame-Options and Content-Security-Policy) on all server responses.</p>
+        </div>
+        <div class="glass-card accent-border anim-left delay-4" style="padding:18px 22px;display:flex;gap:16px;align-items:flex-start;">
+          <code style="color:#c6f91f;font-size:13px;font-weight:600;white-space:nowrap;margin-top:2px;">SR-4</code>
+          <p style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.6;">Harden <span style="color:#fff;font-weight:500;">session cookie attributes</span>, specifically enforcing the SameSite attribute to mitigate cross-site request flooding.</p>
+        </div>
+        <div class="glass-card accent-border anim-left delay-5" style="padding:18px 22px;display:flex;gap:16px;align-items:flex-start;">
+          <code style="color:#c6f91f;font-size:13px;font-weight:600;white-space:nowrap;margin-top:2px;">SR-5</code>
+          <p style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.6;">Integrate automated <span style="color:#fff;font-weight:500;">SAST and DAST</span> into the Software Development Lifecycle.</p>
+        </div>
+        <div class="glass-card accent-border anim-left delay-6" style="padding:18px 22px;display:flex;gap:16px;align-items:flex-start;">
+          <code style="color:#c6f91f;font-size:13px;font-weight:600;white-space:nowrap;margin-top:2px;">SR-6</code>
+          <p style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.6;">Implement a <span style="color:#fff;font-weight:500;">CI/CD release gate</span> that automatically fails the pipeline if critical/high-severity findings are detected.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 6: STRIDE THREAT MODEL ==================== -->
+  <div class="slide" data-slide="5">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;">
+      <div style="margin-bottom:36px;">
+        <div class="anim-left" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Threat Modeling</span>
+        </div>
+        <h2 class="font-geist anim-left delay-1" style="font-size:clamp(28px,4vw,40px);font-weight:300;letter-spacing:-0.03em;">
+          <span style="color:#c6f91f;font-weight:500;">STRIDE</span> Analysis Matrix
+        </h2>
+      </div>
+      <div class="anim-scale delay-2" style="overflow-x:auto;border-radius:12px;border:1px solid rgba(255,255,255,0.06);">
+        <table class="table-custom" style="width:100%;">
+          <thead>
+            <tr>
+              <th style="border-radius:11px 0 0 0;width:14%;">Category</th>
+              <th style="width:28%;">Threat</th>
+              <th style="width:10%;">Status</th>
+              <th style="border-radius:0 11px 0 0;">Mitigation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span style="font-weight:500;color:#f87171;">Spoofing</span></td>
+              <td>Unauthorized login / session hijacking</td>
+              <td><span class="tag tag-mitigated" style="font-size:10px;">Mitigated</span></td>
+              <td>PBKDF2 hashing; <code style="font-size:12px;color:#c6f91f;">@login_required</code></td>
+            </tr>
+            <tr>
+              <td><span style="font-weight:500;color:#fbbf24;">Tampering</span></td>
+              <td>IDOR via task_id manipulation in URL</td>
+              <td><span class="tag tag-mitigated" style="font-size:10px;">Mitigated</span></td>
+              <td>User-scoped DB queries (id + user_id)</td>
+            </tr>
+            <tr>
+              <td><span style="font-weight:500;color:#60a5fa;">Repudiation</span></td>
+              <td>User denies performing destructive action</td>
+              <td><span class="tag tag-residual" style="font-size:10px;">Residual</span></td>
+              <td>Future: structured audit logging</td>
+            </tr>
+            <tr>
+              <td><span style="font-weight:500;color:#a78bfa;">Info Disclosure</span></td>
+              <td>Cross-user task enumeration; debug traces</td>
+              <td><span class="tag tag-mitigated" style="font-size:10px;">Mitigated</span></td>
+              <td>Per-user filtering; debug disabled</td>
+            </tr>
+            <tr>
+              <td><span style="font-weight:500;color:#f472b6;">DoS</span></td>
+              <td>Endpoint flooding of /login (hashing cost)</td>
+              <td><span class="tag tag-residual" style="font-size:10px;">Residual</span></td>
+              <td>Future: Flask-Limiter middleware</td>
+            </tr>
+            <tr>
+              <td><span style="font-weight:500;color:#fb923c;">Elevation</span></td>
+              <td>Horizontal privilege escalation to foreign data</td>
+              <td><span class="tag tag-mitigated" style="font-size:10px;">Mitigated</span></td>
+              <td>Object-level authorization enforcement</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="anim-reveal delay-4" style="margin-top:20px;display:flex;gap:16px;">
+        <div style="display:flex;align-items:center;gap:6px;"><span class="tag tag-mitigated" style="font-size:10px;">Mitigated</span><span style="font-size:12px;color:rgba(255,255,255,0.35);">4/6 threats addressed</span></div>
+        <div style="display:flex;align-items:center;gap:6px;"><span class="tag tag-residual" style="font-size:10px;">Residual</span><span style="font-size:12px;color:rgba(255,255,255,0.35);">2/6 deferred to future roadmap</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 7: DFD TRUST BOUNDARIES ==================== -->
+  <div class="slide" data-slide="6">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;">
+      <div style="margin-bottom:36px;">
+        <div class="anim-left" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Attack Surface</span>
+        </div>
+        <h2 class="font-geist anim-left delay-1" style="font-size:clamp(28px,4vw,40px);font-weight:300;letter-spacing:-0.03em;">
+          Trust <span style="color:#c6f91f;font-weight:500;">Boundary</span> Analysis
+        </h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+        <div class="glass-card anim-reveal delay-1" style="padding:24px;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(to right,#f87171,#fbbf24);"></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(248,113,113,0.1);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="globe" style="width:16px;height:16px;color:#f87171;"></i>
+            </div>
+            <div>
+              <div style="font-size:14px;font-weight:500;">TB1 — Client Layer</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.35);">Untrusted Input Boundary</div>
+            </div>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:16px;">All data from the user agent is considered hostile. Verifies request legitimacy and origin authenticity.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <span style="font-size:11px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);">Authentication</span>
+            <span style="font-size:11px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);">CSRF Verification</span>
+          </div>
+        </div>
+        <div class="glass-card anim-reveal delay-2" style="padding:24px;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(to right,#fbbf24,#c6f91f);"></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(198,249,31,0.1);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="layers" style="width:16px;height:16px;color:#c6f91f;"></i>
+            </div>
+            <div>
+              <div style="font-size:14px;font-weight:500;">TB2 — Application Layer</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.35);">Flask Security Layer</div>
+            </div>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:16px;">Internal processing zone where middleware enforces access rules and injects security headers into responses.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <span style="font-size:11px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);">@login_required</span>
+            <span style="font-size:11px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);">X-Frame-Options</span>
+          </div>
+        </div>
+        <div class="glass-card anim-reveal delay-3" style="padding:24px;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(to right,#c6f91f,#4ade80);"></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(74,222,128,0.1);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="database" style="width:16px;height:16px;color:#4ade80;"></i>
+            </div>
+            <div>
+              <div style="font-size:14px;font-weight:500;">TB3 — Data Layer</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.35);">Trusted App / Data Boundary</div>
+            </div>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:16px;">Most critical line of defense. ORM applies ownership checks ensuring users access only their own data.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <span style="font-size:11px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);">Ownership Check</span>
+            <span style="font-size:11px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);">user_id Filter</span>
+          </div>
+        </div>
+      </div>
+      <div class="anim-reveal delay-5" style="margin-top:28px;text-align:center;">
+        <div style="display:inline-flex;align-items:center;gap:12px;padding:12px 24px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);">
+          <i data-lucide="shield" style="width:16px;height:16px;color:#c6f91f;"></i>
+          <span style="font-size:13px;color:rgba(255,255,255,0.6);">Attack Tree: 3 adversarial paths identified — <span style="color:#c6f91f;font-weight:500;">all 3 BLOCKED</span> by implemented controls</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 8: CVSS RISK ASSESSMENT ==================== -->
+  <div class="slide" data-slide="7">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;">
+      <div>
+        <div class="anim-left" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Risk Assessment</span>
+        </div>
+        <h2 class="font-geist anim-left delay-1" style="font-size:clamp(28px,4vw,40px);font-weight:300;letter-spacing:-0.03em;margin-bottom:24px;">
+          <span style="color:#c6f91f;font-weight:500;">CVSS v3.1</span> Scoring
+        </h2>
+        <p class="anim-left delay-2" style="font-size:14px;color:rgba(255,255,255,0.5);line-height:1.7;margin-bottom:32px;">
+          Standardized, vendor-neutral framework for communicating vulnerability characteristics and severity to establish data-driven remediation priorities.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="anim-left delay-3 glass-card" style="padding:18px 20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span style="font-size:14px;font-weight:500;">CSRF</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:24px;font-weight:600;color:#f87171;font-variant-numeric:tabular-nums;">8.8</span>
+                <span class="tag tag-high" style="font-size:10px;">HIGH</span>
+              </div>
+            </div>
+            <div class="progress-bar-container" style="margin-bottom:8px;"><div class="progress-bar-fill" style="width:88%;background:#f87171;"></div></div>
+            <code style="font-size:11px;color:rgba(255,255,255,0.35);">AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H</code>
+          </div>
+          <div class="anim-left delay-4 glass-card" style="padding:18px 20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span style="font-size:14px;font-weight:500;">IDOR</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:24px;font-weight:600;color:#fbbf24;font-variant-numeric:tabular-nums;">6.5</span>
+                <span class="tag tag-medium" style="font-size:10px;">MEDIUM</span>
+              </div>
+            </div>
+            <div class="progress-bar-container" style="margin-bottom:8px;"><div class="progress-bar-fill" style="width:65%;background:#fbbf24;"></div></div>
+            <code style="font-size:11px;color:rgba(255,255,255,0.35);">AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code>
+          </div>
+          <div class="anim-left delay-5 glass-card" style="padding:18px 20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span style="font-size:14px;font-weight:500;">Clickjacking</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:24px;font-weight:600;color:#fbbf24;font-variant-numeric:tabular-nums;">5.4</span>
+                <span class="tag tag-medium" style="font-size:10px;">MEDIUM</span>
+              </div>
+            </div>
+            <div class="progress-bar-container" style="margin-bottom:8px;"><div class="progress-bar-fill" style="width:54%;background:#fbbf24;"></div></div>
+            <code style="font-size:11px;color:rgba(255,255,255,0.35);">AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N</code>
+          </div>
+        </div>
+      </div>
+      <div class="anim-right delay-2">
+        <div class="glass-card" style="padding:28px;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:20px;">Sprint Priority Order</div>
+          <div style="display:flex;flex-direction:column;gap:20px;">
+            <div style="display:flex;gap:16px;align-items:flex-start;">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(248,113,113,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;font-weight:700;color:#f87171;">1</div>
+              <div>
+                <div style="font-size:14px;font-weight:500;margin-bottom:4px;">CSRF — Highest Priority</div>
+                <p style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.6;">No privileges required (PR:N). Victim-assisted but full C/I/A impact. Can delete all tasks remotely.</p>
+              </div>
+            </div>
+            <div style="width:100%;height:1px;background:rgba(255,255,255,0.05);"></div>
+            <div style="display:flex;gap:16px;align-items:flex-start;">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(251,191,36,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;font-weight:700;color:#fbbf24;">2</div>
+              <div>
+                <div style="font-size:14px;font-weight:500;margin-bottom:4px;">IDOR — Critical Priority</div>
+                <p style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.6;">Low complexity horizontal escalation. Requires valid account but zero user interaction beyond auth.</p>
+              </div>
+            </div>
+            <div style="width:100%;height:1px;background:rgba(255,255,255,0.05);"></div>
+            <div style="display:flex;gap:16px;align-items:flex-start;">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(251,191,36,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;font-weight:700;color:#fbbf24;">3</div>
+              <div>
+                <div style="font-size:14px;font-weight:500;margin-bottom:4px;">Clickjacking — Low-Effort Fix</div>
+                <p style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.6;">Medium severity but trivial mitigation cost — single after_request hook. High risk/value ratio.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 9: VULNERABILITY FINDINGS ==================== -->
+  <div class="slide" data-slide="8">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;">
+      <div style="margin-bottom:36px;">
+        <div class="anim-left" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Findings</span>
+        </div>
+        <h2 class="font-geist anim-left delay-1" style="font-size:clamp(28px,4vw,40px);font-weight:300;letter-spacing:-0.03em;">
+          Vulnerability <span style="color:#c6f91f;font-weight:500;">Findings</span>
+        </h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+        <!-- IDOR -->
+        <div class="glass-card anim-reveal delay-1" style="padding:24px;display:flex;flex-direction:column;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+            <div style="width:40px;height:40px;border-radius:10px;background:rgba(251,191,36,0.1);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="link" style="width:18px;height:18px;color:#fbbf24;"></i>
+            </div>
+            <span class="tag tag-medium" style="font-size:10px;">6.5</span>
+          </div>
+          <h3 style="font-size:18px;font-weight:500;margin-bottom:8px;">IDOR</h3>
+          <p style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:12px;">Insecure Direct Object Reference</p>
+          <p style="font-size:13px;color:rgba(255,255,255,0.55);line-height:1.6;margin-bottom:16px;flex-grow:1;">
+            Direct object references in URL routing (<code style="font-size:11px;color:#c6f91f;">/tasks/&lt;id&gt;/edit</code>) without ownership verification. Attacker manipulates integer IDs to access foreign records.
+          </p>
+          <div style="padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);">
+            <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:6px;">EXPLOITATION</div>
+            <p style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.5;">User A POSTs to <code style="font-size:11px;color:#fbbf24;">/tasks/5/edit</code> — modifies User B's data with zero technical complexity.</p>
+          </div>
+        </div>
+        <!-- CSRF -->
+        <div class="glass-card anim-reveal delay-2" style="padding:24px;display:flex;flex-direction:column;border-color:rgba(248,113,113,0.15);">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+            <div style="width:40px;height:40px;border-radius:10px;background:rgba(248,113,113,0.1);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="repeat" style="width:18px;height:18px;color:#f87171;"></i>
+            </div>
+            <span class="tag tag-high" style="font-size:10px;">8.8</span>
+          </div>
+          <h3 style="font-size:18px;font-weight:500;margin-bottom:8px;">CSRF</h3>
+          <p style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:12px;">Cross-Site Request Forgery</p>
+          <p style="font-size:13px;color:rgba(255,255,255,0.55);line-height:1.6;margin-bottom:16px;flex-grow:1;">
+            Browser auto-includes session cookies for cross-origin POST requests. No distinction between legitimate and forged form submissions.
+          </p>
+          <div style="padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);">
+            <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:6px;">EXPLOITATION</div>
+            <p style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.5;">Hidden form on attacker page auto-submits DELETE — victim's session executes unauthorized destruction.</p>
+          </div>
+        </div>
+        <!-- Clickjacking -->
+        <div class="glass-card anim-reveal delay-3" style="padding:24px;display:flex;flex-direction:column;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+            <div style="width:40px;height:40px;border-radius:10px;background:rgba(251,191,36,0.1);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="frame" style="width:18px;height:18px;color:#fbbf24;"></i>
+            </div>
+            <span class="tag tag-medium" style="font-size:10px;">5.4</span>
+          </div>
+          <h3 style="font-size:18px;font-weight:500;margin-bottom:8px;">Clickjacking</h3>
+          <p style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:12px;">UI Redress Attack</p>
+          <p style="font-size:13px;color:rgba(255,255,255,0.55);line-height:1.6;margin-bottom:16px;flex-grow:1;">
+            Browsers allow pages in iframes across origins. Attacker overlays deceptive UI on transparent framed legitimate app.
+          </p>
+          <div style="padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);">
+            <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:6px;">EXPLOITATION</div>
+            <p style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.5;">"Click to Win" button aligned over hidden Delete Task button — victim clicks unknowingly.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 10: SECURITY IMPLEMENTATION ==================== -->
+  <div class="slide" data-slide="9">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;">
+      <div style="margin-bottom:32px;">
+        <div class="anim-left" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Implementation</span>
+        </div>
+        <h2 class="font-geist anim-left delay-1" style="font-size:clamp(28px,4vw,40px);font-weight:300;letter-spacing:-0.03em;">
+          Code-Level <span style="color:#c6f91f;font-weight:500;">Mitigations</span>
+        </h2>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <!-- IDOR Code -->
+        <div class="anim-left delay-2">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <i data-lucide="link" style="width:14px;height:14px;color:#fbbf24;"></i>
+            <span style="font-size:13px;font-weight:500;">IDOR Mitigation — User-Scoped Query</span>
+          </div>
+          <div class="code-block" style="padding:18px 20px;">
+            <span class="comment"># app/routes/tasks.py</span><br>
+            <span class="keyword">from</span> flask_login <span class="keyword">import</span> current_user<br>
+            <span class="keyword">from</span> app.models <span class="keyword">import</span> Task<br><br>
+            <span class="keyword">def</span> <span class="func">_get_user_task_or_404</span>(<span class="param">task_id</span>):<br>
+            &nbsp;&nbsp;<span class="string">"""Returns 404 if task belongs to another user."""</span><br>
+            &nbsp;&nbsp;<span class="keyword">return</span> Task.query.<span class="func">filter_by</span>(<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;id=task_id,<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;user_id=current_user.id<br>
+            &nbsp;&nbsp;).<span class="func">first_or_404</span>()
+          </div>
+        </div>
+        <!-- CSRF Code -->
+        <div class="anim-right delay-2">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <i data-lucide="repeat" style="width:14px;height:14px;color:#f87171;"></i>
+            <span style="font-size:13px;font-weight:500;">CSRF Mitigation — Synchronizer Token</span>
+          </div>
+          <div class="code-block" style="padding:18px 20px;">
+            <span class="comment"># app/__init__.py</span><br>
+            <span class="keyword">from</span> flask_wtf.csrf <span class="keyword">import</span> CSRFProtect<br>
+            csrf = <span class="func">CSRFProtect</span>()<br><br>
+            <span class="keyword">def</span> <span class="func">create_app</span>(<span class="param">config</span>):<br>
+            &nbsp;&nbsp;app = <span class="func">Flask</span>(<span class="string">__name__</span>)<br>
+            &nbsp;&nbsp;csrf.<span class="func">init_app</span>(app)<br>
+            &nbsp;&nbsp;<span class="keyword">return</span> app<br><br>
+            <span class="comment">&lt;!-- Jinja2 Template --&gt;</span><br>
+            &lt;input type=<span class="string">"hidden"</span> name=<span class="string">"csrf_token"</span><br>
+            &nbsp;&nbsp;value=<span class="string">"{{ csrf_token() }}"</span>&gt;
+          </div>
+        </div>
+        <!-- Headers Code -->
+        <div class="anim-left delay-3">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <i data-lucide="frame" style="width:14px;height:14px;color:#fbbf24;"></i>
+            <span style="font-size:13px;font-weight:500;">Clickjacking Prevention — Security Headers</span>
+          </div>
+          <div class="code-block" style="padding:18px 20px;">
+            <span class="comment"># app/__init__.py</span><br>
+            <span class="decorator">@app.after_request</span><br>
+            <span class="keyword">def</span> <span class="func">add_security_headers</span>(<span class="param">response</span>):<br>
+            &nbsp;&nbsp;response.headers[<span class="string">"X-Frame-Options"</span>] = <span class="string">"DENY"</span><br>
+            &nbsp;&nbsp;response.headers[<span class="string">"Content-Security-Policy"</span>] \<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;= <span class="string">"frame-ancestors 'none'"</span><br>
+            &nbsp;&nbsp;response.headers[<span class="string">"X-Content-Type-Options"</span>] \<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;= <span class="string">"nosniff"</span><br>
+            &nbsp;&nbsp;<span class="keyword">return</span> response
+          </div>
+        </div>
+        <!-- Session Code -->
+        <div class="anim-right delay-3">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <i data-lucide="cookie" style="width:14px;height:14px;color:#c6f91f;"></i>
+            <span style="font-size:13px;font-weight:500;">Session Hardening — Cookie Attributes</span>
+          </div>
+          <div class="code-block" style="padding:18px 20px;">
+            <span class="comment"># config.py</span><br>
+            SESSION_COOKIE_SAMESITE = <span class="string">"Lax"</span><br>
+            SESSION_COOKIE_HTTPONLY = <span class="keyword">True</span><br>
+            SESSION_COOKIE_SECURE = <span class="keyword">True</span> <span class="comment"># HTTPS</span><br><br>
+            <span class="comment"># Defense-in-depth:</span><br>
+            <span class="comment"># SameSite=Lax blocks cross-site POST</span><br>
+            <span class="comment"># cookies in modern browsers,</span><br>
+            <span class="comment"># complementing CSRF token validation.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 11: SECURITY TEST SUITE ==================== -->
+  <div class="slide" data-slide="10">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;">
+      <div>
+        <div class="anim-left" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Validation</span>
+        </div>
+        <h2 class="font-geist anim-left delay-1" style="font-size:clamp(28px,4vw,40px);font-weight:300;letter-spacing:-0.03em;margin-bottom:24px;">
+          Security <span style="color:#c6f91f;font-weight:500;">Test Suite</span>
+        </h2>
+        <p class="anim-left delay-2" style="font-size:14px;color:rgba(255,255,255,0.5);line-height:1.7;margin-bottom:28px;">
+          Five dedicated test cases in <code style="font-size:12px;color:#c6f91f;">tests/test_security.py</code> validate all defensive boundaries with explicit HTTP response assertions.
+        </p>
+        <div class="anim-scale delay-3" style="padding:20px;border-radius:12px;background:#0B0F13;border:1px solid rgba(255,255,255,0.06);">
+          <div style="font-family:monospace;font-size:12px;line-height:1.8;color:rgba(255,255,255,0.6);">
+            <span style="color:#4ade80;">$</span> pytest tests/test_security.py -v<br><br>
+            <span style="color:#c6f91f;">test_unauthenticated_redirect</span> <span style="color:#4ade80;">PASSED</span><br>
+            <span style="color:#c6f91f;">test_owner_only_task_visibility</span> <span style="color:#4ade80;">PASSED</span><br>
+            <span style="color:#c6f91f;">test_idor_block_foreign_edit</span> <span style="color:#4ade80;">PASSED</span><br>
+            <span style="color:#c6f91f;">test_csrf_rejection_create</span> <span style="color:#4ade80;">PASSED</span><br>
+            <span style="color:#c6f91f;">test_csrf_rejection_logout</span> <span style="color:#4ade80;">PASSED</span><br><br>
+            <span style="color:rgba(255,255,255,0.4);">===== 5 passed in 2.16s =====</span>
+          </div>
+        </div>
+      </div>
+      <div class="anim-right delay-2">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="glass-card" style="padding:16px 18px;display:flex;align-items:center;gap:14px;">
+            <div style="width:36px;height:36px;border-radius:8px;background:rgba(198,249,31,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:13px;font-weight:700;color:#c6f91f;">T1</span>
+            </div>
+            <div style="flex-grow:1;">
+              <div style="font-size:13px;font-weight:500;">Unauthenticated Redirect</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.35);">Access protected route → <code style="color:#4ade80;">HTTP 302</code></div>
+            </div>
+            <i data-lucide="check-circle-2" style="width:18px;height:18px;color:#4ade80;"></i>
+          </div>
+          <div class="glass-card" style="padding:16px 18px;display:flex;align-items:center;gap:14px;">
+            <div style="width:36px;height:36px;border-radius:8px;background:rgba(198,249,31,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:13px;font-weight:700;color:#c6f91f;">T2</span>
+            </div>
+            <div style="flex-grow:1;">
+              <div style="font-size:13px;font-weight:500;">Owner-Only Task Visibility</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.35);">Filtered results → <code style="color:#4ade80;">HTTP 200</code></div>
+            </div>
+            <i data-lucide="check-circle-2" style="width:18px;height:18px;color:#4ade80;"></i>
+          </div>
+          <div class="glass-card" style="padding:16px 18px;display:flex;align-items:center;gap:14px;">
+            <div style="width:36px;height:36px;border-radius:8px;background:rgba(198,249,31,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:13px;font-weight:700;color:#c6f91f;">T3</span>
+            </div>
+            <div style="flex-grow:1;">
+              <div style="font-size:13px;font-weight:500;">IDOR Block on Foreign Edit</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.35);">Foreign task_id → <code style="color:#fbbf24;">HTTP 404</code></div>
+            </div>
+            <i data-lucide="check-circle-2" style="width:18px;height:18px;color:#4ade80;"></i>
+          </div>
+          <div class="glass-card" style="padding:16px 18px;display:flex;align-items:center;gap:14px;">
+            <div style="width:36px;height:36px;border-radius:8px;background:rgba(198,249,31,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:13px;font-weight:700;color:#c6f91f;">T4</span>
+            </div>
+            <div style="flex-grow:1;">
+              <div style="font-size:13px;font-weight:500;">CSRF Rejection on Create</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.35);">Missing token → <code style="color:#f87171;">HTTP 400</code></div>
+            </div>
+            <i data-lucide="check-circle-2" style="width:18px;height:18px;color:#4ade80;"></i>
+          </div>
+          <div class="glass-card" style="padding:16px 18px;display:flex;align-items:center;gap:14px;">
+            <div style="width:36px;height:36px;border-radius:8px;background:rgba(198,249,31,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:13px;font-weight:700;color:#c6f91f;">T5</span>
+            </div>
+            <div style="flex-grow:1;">
+              <div style="font-size:13px;font-weight:500;">CSRF Rejection on Logout</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.35);">Missing token → <code style="color:#f87171;">HTTP 400</code></div>
+            </div>
+            <i data-lucide="check-circle-2" style="width:18px;height:18px;color:#4ade80;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 12: CI/CD PIPELINE ==================== -->
+  <div class="slide" data-slide="11">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;">
+      <div style="margin-bottom:36px;">
+        <div class="anim-left" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">DevSecOps Automation</span>
+        </div>
+        <h2 class="font-geist anim-left delay-1" style="font-size:clamp(28px,4vw,40px);font-weight:300;letter-spacing:-0.03em;">
+          CI/CD <span style="color:#c6f91f;font-weight:500;">Pipeline</span> Architecture
+        </h2>
+      </div>
+      <!-- Pipeline visualization -->
+      <div class="anim-scale delay-2" style="display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:32px;flex-wrap:nowrap;overflow-x:auto;padding:8px 0;">
+        <div class="pipeline-node" style="min-width:200px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:28px;height:28px;border-radius:6px;background:rgba(74,222,128,0.15);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="test-tubes" style="width:14px;height:14px;color:#4ade80;"></i>
+            </div>
+            <span style="font-size:14px;font-weight:500;">1. Unit Tests</span>
+          </div>
+          <p style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.5;">pytest security suite — 5 test cases</p>
+          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.25);">Fail: Any test fails</div>
+        </div>
+        <div class="pipeline-connector"><i data-lucide="chevron-right" style="width:20px;height:20px;color:rgba(255,255,255,0.15);"></i></div>
+        <div class="pipeline-node" style="min-width:200px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:28px;height:28px;border-radius:6px;background:rgba(198,249,31,0.15);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="scan-search" style="width:14px;height:14px;color:#c6f91f;"></i>
+            </div>
+            <span style="font-size:14px;font-weight:500;">2. SAST (CodeQL)</span>
+          </div>
+          <p style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.5;">Semantic analysis — tainted data flow tracing</p>
+          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.25);">Fail: Critical/High alert</div>
+        </div>
+        <div class="pipeline-connector"><i data-lucide="chevron-right" style="width:20px;height:20px;color:rgba(255,255,255,0.15);"></i></div>
+        <div class="pipeline-node" style="min-width:200px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:28px;height:28px;border-radius:6px;background:rgba(251,191,36,0.15);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="radar" style="width:14px;height:14px;color:#fbbf24;"></i>
+            </div>
+            <span style="font-size:14px;font-weight:500;">3. DAST (ZAP)</span>
+          </div>
+          <p style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.5;">OWASP ZAP baseline — header & endpoint scan</p>
+          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.25);">Fail: High-severity alert</div>
+        </div>
+        <div class="pipeline-connector"><i data-lucide="chevron-right" style="width:20px;height:20px;color:rgba(255,255,255,0.15);"></i></div>
+        <div class="pipeline-node" style="min-width:200px;border-color:rgba(198,249,31,0.2);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:28px;height:28px;border-radius:6px;background:rgba(198,249,31,0.15);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="shield-check" style="width:14px;height:14px;color:#c6f91f;"></i>
+            </div>
+            <span style="font-size:14px;font-weight:500;color:#c6f91f;">4. Security Gate</span>
+          </div>
+          <p style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.5;">API query — blocks merge on open alerts</p>
+          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.25);">Fail: Any open alert</div>
+        </div>
+      </div>
+      <!-- Trigger & details -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+        <div class="glass-card anim-reveal delay-3" style="padding:20px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <i data-lucide="git-commit" style="width:14px;height:14px;color:rgba(255,255,255,0.4);"></i>
+            <span style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.6);">Trigger: Push</span>
+          </div>
+          <p style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.6;">Auto-runs on push to <code style="color:#c6f91f;">main</code> or <code style="color:#c6f91f;">development</code> branches.</p>
+        </div>
+        <div class="glass-card anim-reveal delay-4" style="padding:20px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <i data-lucide="git-pull-request" style="width:14px;height:14px;color:rgba(255,255,255,0.4);"></i>
+            <span style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.6);">Trigger: Pull Request</span>
+          </div>
+          <p style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.6;">Shift-left feedback to reviewers <span style="color:rgba(255,255,255,0.3);">before</span> merge to protected branch.</p>
+        </div>
+        <div class="glass-card anim-reveal delay-5" style="padding:20px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <i data-lucide="archive" style="width:14px;height:14px;color:rgba(255,255,255,0.4);"></i>
+            <span style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.6);">Artifacts</span>
+          </div>
+          <p style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.6;">ZAP HTML/JSON reports retained <span style="color:#c6f91f;">30 days</span> as audit trail.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 13: SAST + DAST RESULTS ==================== -->
+  <div class="slide" data-slide="12">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;">
+      <div style="margin-bottom:36px;">
+        <div class="anim-left" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Validation Results</span>
+        </div>
+        <h2 class="font-geist anim-left delay-1" style="font-size:clamp(28px,4vw,40px);font-weight:300;letter-spacing:-0.03em;">
+          SAST + DAST <span style="color:#c6f91f;font-weight:500;">Results</span>
+        </h2>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px;">
+        <!-- SAST -->
+        <div class="glass-card anim-left delay-2" style="padding:24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;border-radius:10px;background:rgba(198,249,31,0.1);display:flex;align-items:center;justify-content:center;">
+                <i data-lucide="scan-search" style="width:18px;height:18px;color:#c6f91f;"></i>
+              </div>
+              <div>
+                <div style="font-size:15px;font-weight:500;">CodeQL — SAST</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.35);">Static Analysis</div>
+              </div>
+            </div>
+            <span class="tag tag-mitigated" style="font-size:10px;">CLEARED</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;background:rgba(255,255,255,0.02);">
+              <span style="font-size:13px;color:rgba(255,255,255,0.6);">Tainted data flow</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:12px;color:rgba(255,255,255,0.3);">Pre:</span><span style="font-size:12px;color:#f87171;">Flagged</span>
+                <i data-lucide="arrow-right" style="width:12px;height:12px;color:rgba(255,255,255,0.15);"></i>
+                <span style="font-size:12px;color:rgba(255,255,255,0.3);">Post:</span><span style="font-size:12px;color:#4ade80;">Sanitized</span>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;background:rgba(255,255,255,0.02);">
+              <span style="font-size:13px;color:rgba(255,255,255,0.6);">Ownership verification</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:12px;color:rgba(255,255,255,0.3);">Pre:</span><span style="font-size:12px;color:#f87171;">Missing</span>
+                <i data-lucide="arrow-right" style="width:12px;height:12px;color:rgba(255,255,255,0.15);"></i>
+                <span style="font-size:12px;color:rgba(255,255,255,0.3);">Post:</span><span style="font-size:12px;color:#4ade80;">Enforced</span>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;background:rgba(255,255,255,0.02);">
+              <span style="font-size:13px;color:rgba(255,255,255,0.6);">Critical/High alerts</span>
+              <span style="font-size:14px;font-weight:600;color:#4ade80;">0</span>
+            </div>
+          </div>
+        </div>
+        <!-- DAST -->
+        <div class="glass-card anim-right delay-2" style="padding:24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;border-radius:10px;background:rgba(251,191,36,0.1);display:flex;align-items:center;justify-content:center;">
+                <i data-lucide="radar" style="width:18px;height:18px;color:#fbbf24;"></i>
+              </div>
+              <div>
+                <div style="font-size:15px;font-weight:500;">OWASP ZAP — DAST</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.35);">Dynamic Analysis</div>
+              </div>
+            </div>
+            <span class="tag tag-mitigated" style="font-size:10px;">PASSED</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;background:rgba(255,255,255,0.02);">
+              <span style="font-size:13px;color:rgba(255,255,255,0.6);">Anti-Clickjacking Header</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:12px;color:#f87171;">FAIL</span>
+                <i data-lucide="arrow-right" style="width:12px;height:12px;color:rgba(255,255,255,0.15);"></i>
+                <span style="font-size:12px;color:#4ade80;">PASS</span>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;background:rgba(255,255,255,0.02);">
+              <span style="font-size:13px;color:rgba(255,255,255,0.6);">Content-Security-Policy</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:12px;color:#f87171;">FAIL</span>
+                <i data-lucide="arrow-right" style="width:12px;height:12px;color:rgba(255,255,255,0.15);"></i>
+                <span style="font-size:12px;color:#4ade80;">PASS</span>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;background:rgba(255,255,255,0.02);">
+              <span style="font-size:13px;color:rgba(255,255,255,0.6);">Session SameSite Cookie</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:12px;color:#f87171;">FAIL</span>
+                <i data-lucide="arrow-right" style="width:12px;height:12px;color:rgba(255,255,255,0.15);"></i>
+                <span style="font-size:12px;color:#4ade80;">PASS</span>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;background:rgba(255,255,255,0.02);">
+              <span style="font-size:13px;color:rgba(255,255,255,0.6);">High-severity alerts</span>
+              <span style="font-size:14px;font-weight:600;color:#4ade80;">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="anim-reveal delay-4" style="text-align:center;">
+        <div style="display:inline-flex;align-items:center;gap:24px;padding:16px 32px;border-radius:12px;background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.15);">
+          <div style="text-align:center;">
+            <div style="font-size:28px;font-weight:600;color:#4ade80;font-variant-numeric:tabular-nums;">0</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.35);">Critical</div>
+          </div>
+          <div style="width:1px;height:32px;background:rgba(255,255,255,0.08);"></div>
+          <div style="text-align:center;">
+            <div style="font-size:28px;font-weight:600;color:#4ade80;font-variant-numeric:tabular-nums;">0</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.35);">High</div>
+          </div>
+          <div style="width:1px;height:32px;background:rgba(255,255,255,0.08);"></div>
+          <div style="text-align:center;">
+            <div style="font-size:28px;font-weight:600;color:#4ade80;font-variant-numeric:tabular-nums;">5/5</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.35);">Tests Passed</div>
+          </div>
+          <div style="width:1px;height:32px;background:rgba(255,255,255,0.08);"></div>
+          <div style="text-align:center;">
+            <div style="font-size:28px;font-weight:600;color:#4ade80;font-variant-numeric:tabular-nums;">3/3</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.35);">Vulns Mitigated</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 14: CONCLUSION & ROADMAP ==================== -->
+  <div class="slide" data-slide="13">
+    <div class="slide-content" style="max-width:1100px;width:100%;padding:0 48px;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;">
+      <div>
+        <div class="anim-left" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div style="width:20px;height:1px;background:#c6f91f;"></div>
+          <span style="font-size:11px;color:#c6f91f;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Conclusion</span>
+        </div>
+        <h2 class="font-geist anim-left delay-1" style="font-size:clamp(28px,4vw,36px);font-weight:300;letter-spacing:-0.03em;margin-bottom:24px;">
+          Future <span style="color:#c6f91f;font-weight:500;">Hardening</span> Roadmap
+        </h2>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="glass-card anim-left delay-2 accent-border" style="padding:14px 18px;display:flex;gap:14px;align-items:center;">
+            <span class="tag tag-high" style="font-size:10px;flex-shrink:0;">P1</span>
+            <div>
+              <div style="font-size:13px;font-weight:500;">Rate Limiting (Flask-Limiter)</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.35);">Prevent credential stuffing & DoS → addresses STRIDE-D</div>
+            </div>
+          </div>
+          <div class="glass-card anim-left delay-3 accent-border" style="padding:14px 18px;display:flex;gap:14px;align-items:center;">
+            <span class="tag tag-high" style="font-size:10px;flex-shrink:0;">P2</span>
+            <div>
+              <div style="font-size:13px;font-weight:500;">Structured Audit Logging</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.35);">Append-only auth & mutation logs with IP → addresses STRIDE-R</div>
+            </div>
+          </div>
+          <div class="glass-card anim-left delay-4 accent-border" style="padding:14px 18px;display:flex;gap:14px;align-items:center;">
+            <span class="tag tag-medium" style="font-size:10px;flex-shrink:0;">P3</span>
+            <div>
+              <div style="font-size:13px;font-weight:500;">Enforce debug=False in Production</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.35);">Prevent stack trace disclosure → addresses STRIDE-I</div>
+            </div>
+          </div>
+          <div class="glass-card anim-left delay-5 accent-border" style="padding:14px 18px;display:flex;gap:14px;align-items:center;">
+            <span class="tag tag-medium" style="font-size:10px;flex-shrink:0;">P4</span>
+            <div>
+              <div style="font-size:13px;font-weight:500;">Multi-Factor Authentication (MFA)</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.35);">Reduce account compromise risk → addresses STRIDE-S</div>
+            </div>
+          </div>
+          <div class="glass-card anim-left delay-6 accent-border" style="padding:14px 18px;display:flex;gap:14px;align-items:center;">
+            <span class="tag tag-low" style="font-size:10px;flex-shrink:0;">P5</span>
+            <div>
+              <div style="font-size:13px;font-weight:500;">Authenticated DAST + HSTS Headers</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.35);">Scan behind login wall; add Strict-Transport-Security</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="anim-right delay-2" style="margin-bottom:28px;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;">DevSecOps Maturity</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div style="flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,0.05);overflow:hidden;">
+              <div style="width:50%;height:100%;border-radius:4px;background:linear-gradient(to right,#c6f91f,#4ade80);transition:width 1.5s ease;"></div>
+            </div>
+            <span style="font-size:13px;font-weight:600;color:#c6f91f;">Level 2</span>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;">Advanced from <span style="color:rgba(255,255,255,0.7);">Level 0</span> (no automation) to <span style="color:#c6f91f;">Level 2</span> (integrated automated security testing with quality gates).</p>
+        </div>
+        <div class="glass-card anim-scale delay-3" style="padding:28px;text-align:center;margin-bottom:28px;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:20px;">Sprint Summary</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;">
+            <div>
+              <div style="font-size:32px;font-weight:600;color:#c6f91f;font-variant-numeric:tabular-nums;">3</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);">Vulns Fixed</div>
+            </div>
+            <div>
+              <div style="font-size:32px;font-weight:600;color:#c6f91f;font-variant-numeric:tabular-nums;">5</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);">Tests Passing</div>
+            </div>
+            <div>
+              <div style="font-size:32px;font-weight:600;color:#c6f91f;font-variant-numeric:tabular-nums;">48h</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);">Sprint Time</div>
+            </div>
+          </div>
+          <div style="padding-top:16px;border-top:1px solid rgba(255,255,255,0.05);">
+            <span style="font-size:13px;color:rgba(255,255,255,0.5);">Pipeline blocks merge on </span>
+            <span style="font-size:13px;color:#f87171;font-weight:500;">Critical/High</span>
+            <span style="font-size:13px;color:rgba(255,255,255,0.5);"> findings</span>
+          </div>
+        </div>
+        <div class="anim-reveal delay-5" style="text-align:center;padding:28px;border-radius:16px;border:1px solid rgba(198,249,31,0.15);background:rgba(198,249,31,0.03);">
+          <div class="font-geist" style="font-size:24px;font-weight:600;letter-spacing:-0.02em;margin-bottom:8px;">
+            <span class="gradient-text">SecOpsX</span>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,0.4);line-height:1.6;">Thank you for your attention</p>
+          <p style="font-size:12px;color:rgba(255,255,255,0.25);margin-top:6px;">Questions & Discussion</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Initialize Lucide icons
+  lucide.createIcons();
+
+  // Slide navigation
+  const slides = document.querySelectorAll('.slide');
+  const totalSlides = slides.length;
+  let currentSlide = 0;
+  let isTransitioning = false;
+
+  // Create nav dots
+  const navDotsContainer = document.getElementById('navDots');
+  for (let i = 0; i < totalSlides; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', () => goToSlide(i));
+    dot.title = `Slide ${i + 1}`;
+    navDotsContainer.appendChild(dot);
+  }
+
+  function updateUI() {
+    // Update slide counter
+    document.getElementById('slideCounter').textContent = 
+      String(currentSlide + 1).padStart(2, '0') + ' / ' + String(totalSlides).padStart(2, '0');
+    
+    // Update progress bar
+    document.getElementById('progressBar').style.width = 
+      ((currentSlide + 1) / totalSlides * 100) + '%';
+    
+    // Update nav dots
+    document.querySelectorAll('.nav-dot').forEach((dot, i) => {
+      dot.classList.toggle('active', i === currentSlide);
+    });
+  }
+
+  function goToSlide(index) {
+    if (isTransitioning || index === currentSlide || index < 0 || index >= totalSlides) return;
+    isTransitioning = true;
+    
+    slides[currentSlide].classList.remove('active');
+    currentSlide = index;
+    slides[currentSlide].classList.add('active');
+    updateUI();
+    
+    setTimeout(() => { isTransitioning = false; }, 650);
+  }
+
+  function nextSlide() { goToSlide(currentSlide + 1); }
+  function prevSlide() { goToSlide(currentSlide - 1); }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown') {
+      e.preventDefault(); nextSlide();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+      e.preventDefault(); prevSlide();
+    } else if (e.key === 'Home') {
+      e.preventDefault(); goToSlide(0);
+    } else if (e.key === 'End') {
+      e.preventDefault(); goToSlide(totalSlides - 1);
+    }
+  });
+
+  // Touch/swipe support
+  let touchStartX = 0;
+  let touchStartY = 0;
+  document.addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+      if (dx < 0) nextSlide(); else prevSlide();
+    }
+  }, { passive: true });
+
+  // Mouse wheel (with debounce)
+  let wheelTimeout = null;
+  document.addEventListener('wheel', (e) => {
+    if (wheelTimeout) return;
+    wheelTimeout = setTimeout(() => { wheelTimeout = null; }, 800);
+    if (e.deltaY > 30) nextSlide();
+    else if (e.deltaY < -30) prevSlide();
+  }, { passive: true });
+
+  // Initialize
+  updateUI();
+</script>
+
+</body>
+</html>
